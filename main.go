@@ -62,7 +62,6 @@ func (self *syndef) format() error {
 	}
 	switch *self.output {
 	case "json":
-		fmt.Println("json output")
 		err = d.WriteJSON(os.Stdout)
 	case "dot":
 		err = d.WriteGraph(os.Stdout)

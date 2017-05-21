@@ -3,56 +3,71 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/scgolang/sc"
 	"os"
+
+	"github.com/pkg/errors"
+	"github.com/scgolang/sc"
 )
 
-type syndef struct {
+// controller controls the behavior of the app
+type controller struct {
 	command  string
 	output   *string
 	flagSets map[string]*flag.FlagSet
 }
 
-func newSyndef() *syndef {
-	s := new(syndef)
-	s.flagSets = make(map[string]*flag.FlagSet)
-	s.flagSets["format"] = flag.NewFlagSet("format", flag.ExitOnError)
-	s.flagSets["diff"] = flag.NewFlagSet("diff", flag.ExitOnError)
-	s.output = s.flagSets["format"].String("output", "json", "output format")
-	return s
-}
-
-// command returns the FlagSet for a particular command,
-// or nil if this was an invalid command
-func (self *syndef) flagsFor(command string) *flag.FlagSet {
-	if flagSet, hasCommand := self.flagSets[command]; hasCommand {
-		self.command = command
-		return flagSet
-	} else {
-		return nil
-	}
-}
-
-// usage prints a usage message on stderr
-func (self *syndef) usage() {
-	w, prog := os.Stderr, os.Args[0]
-	fmt.Fprintf(w, "Usage:\n")
-	fmt.Fprintf(w, "%s COMMAND [OPTIONS]\n\n", prog)
-	fmt.Fprintf(w, "Commands:\n")
-	for cmd, _ := range self.flagSets {
-		fmt.Fprintf(w, "%s\n", cmd)
-	}
+func newController() *controller {
+	c := &controller{}
+	c.flagSets = make(map[string]*flag.FlagSet)
+	c.flagSets["format"] = flag.NewFlagSet("format", flag.ExitOnError)
+	c.flagSets["diff"] = flag.NewFlagSet("diff", flag.ExitOnError)
+	c.output = c.flagSets["format"].String("output", "json", "output format")
+	return c
 }
 
 // die prints an error message and kills the process
-func (self *syndef) die(err error) {
+func (c *controller) die(err error) {
 	fmt.Fprintf(os.Stderr, "%s\n", err.Error())
 	os.Exit(1)
 }
 
+// diff runs the diff command
+func (c *controller) diff() error {
+	fset := c.flagSets["diff"]
+
+	if expected, got := 2, len(fset.Args()); expected != got {
+		return errors.Errorf("expected %d args, got %d", expected, got)
+	}
+	f1, err := os.Open(fset.Arg(0))
+	if err != nil {
+		return err
+	}
+	f2, err := os.Open(fset.Arg(1))
+	if err != nil {
+		return err
+	}
+	s1, err := sc.ReadSynthdef(f1)
+	if err != nil {
+		return err
+	}
+	s2, err := sc.ReadSynthdef(f2)
+	if err != nil {
+		return err
+	}
+	diffs, err := differ{}.do(s1, s2)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%50s%50s\n", fset.Arg(0), fset.Arg(1))
+	for _, diff := range diffs {
+		fmt.Printf("%50s%50s\n", diff[0], diff[1])
+	}
+	return nil
+}
+
 // format runs the format command
-func (self *syndef) format() error {
-	r, err := os.Open(self.flagSets["format"].Arg(0))
+func (c *controller) format() error {
+	r, err := os.Open(c.flagSets["format"].Arg(0))
 	if err != nil {
 		return err
 	}
@@ -60,7 +75,7 @@ func (self *syndef) format() error {
 	if err != nil {
 		return err
 	}
-	switch *self.output {
+	switch *c.output {
 	case "json":
 		err = d.WriteJSON(os.Stdout)
 	case "dot":
@@ -71,47 +86,53 @@ func (self *syndef) format() error {
 	return err
 }
 
-// diff runs the diff command
-func (self *syndef) diff() error {
+// run runs a command
+func (c *controller) run() error {
+	switch c.command {
+	case "format":
+		return c.format()
+	case "diff":
+		return c.diff()
+	}
 	return nil
 }
 
-// run runs a command
-func (self *syndef) run() error {
-	switch self.command {
-	case "format":
-		return self.format()
-	case "diff":
-		return self.diff()
+// usage prints a usage message on stderr
+func (c *controller) usage() {
+	w, prog := os.Stderr, os.Args[0]
+	fmt.Fprintf(w, "Usage:\n")
+	fmt.Fprintf(w, "%s COMMAND [OPTIONS]\n\n", prog)
+	fmt.Fprintf(w, "Commands:\n")
+	for cmd, _ := range c.flagSets {
+		fmt.Fprintf(w, "%s\n", cmd)
 	}
-	return nil
 }
 
 func main() {
-	syndef := newSyndef()
+	controller := newController()
 	if len(os.Args) < 2 {
-		syndef.usage()
+		controller.usage()
 		os.Exit(1)
 	}
 	// determine if it is a valid command
-	var command *flag.FlagSet
-	if command = syndef.flagsFor(os.Args[1]); command == nil {
-		syndef.usage()
+	command := controller.flagSets[os.Args[1]]
+	if command == nil {
+		controller.usage()
 		os.Exit(1)
 	}
 	// parse cli flags for the command
 	err := command.Parse(os.Args[2:])
 	if err != nil {
 		if err == flag.ErrHelp {
-			syndef.usage()
+			controller.usage()
 			os.Exit(0)
 		} else {
-			syndef.die(err)
+			controller.die(err)
 		}
 	}
 	// run the command
-	err = syndef.run()
+	err = controller.run()
 	if err != nil {
-		syndef.die(err)
+		controller.die(err)
 	}
 }

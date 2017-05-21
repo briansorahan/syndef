@@ -58,9 +58,9 @@ func (c *controller) diff() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%50s%50s\n", fset.Arg(0), fset.Arg(1))
+	fmt.Printf("%-50s%-50s\n", fset.Arg(0), fset.Arg(1))
 	for _, diff := range diffs {
-		fmt.Printf("%50s%50s\n", diff[0], diff[1])
+		fmt.Printf("%-50s%-50s\n", diff[0], diff[1])
 	}
 	return nil
 }
@@ -110,19 +110,21 @@ func (c *controller) usage() {
 
 func main() {
 	controller := newController()
+
 	if len(os.Args) < 2 {
 		controller.usage()
 		os.Exit(1)
 	}
-	// determine if it is a valid command
-	command := controller.flagSets[os.Args[1]]
+	controller.command = os.Args[1]
+
+	command := controller.flagSets[controller.command]
+
 	if command == nil {
 		controller.usage()
 		os.Exit(1)
 	}
 	// parse cli flags for the command
-	err := command.Parse(os.Args[2:])
-	if err != nil {
+	if err := command.Parse(os.Args[2:]); err != nil {
 		if err == flag.ErrHelp {
 			controller.usage()
 			os.Exit(0)
@@ -131,8 +133,7 @@ func main() {
 		}
 	}
 	// run the command
-	err = controller.run()
-	if err != nil {
+	if err := controller.run(); err != nil {
 		controller.die(err)
 	}
 }

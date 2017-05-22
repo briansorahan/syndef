@@ -1,13 +1,46 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/pkg/errors"
 	"github.com/scgolang/sc"
 )
+
+func main() {
+	controller := newController()
+
+	if len(os.Args) < 2 {
+		controller.usage()
+		os.Exit(1)
+	}
+	controller.command = os.Args[1]
+
+	command := controller.flagSets[controller.command]
+
+	if command == nil {
+		controller.usage()
+		os.Exit(1)
+	}
+	// parse cli flags for the command
+	if err := command.Parse(os.Args[2:]); err != nil {
+		if err == flag.ErrHelp {
+			controller.usage()
+			os.Exit(0)
+		} else {
+			controller.die(err)
+		}
+	}
+	// run the command
+	if err := controller.run(); err != nil {
+		controller.die(err)
+	}
+}
 
 // controller controls the behavior of the app
 type controller struct {
@@ -77,13 +110,14 @@ func (c *controller) format() error {
 	}
 	switch *c.output {
 	case "json":
-		err = d.WriteJSON(os.Stdout)
+		return d.WriteJSON(os.Stdout)
 	case "dot":
-		err = d.WriteGraph(os.Stdout)
+		return d.WriteGraph(os.Stdout)
+	case "xml":
+		return d.WriteXML(os.Stdout)
 	default:
-		err = d.WriteXML(os.Stdout)
+		return c.writeTree(os.Stdout, d)
 	}
-	return err
 }
 
 // run runs a command
@@ -108,32 +142,16 @@ func (c *controller) usage() {
 	}
 }
 
-func main() {
-	controller := newController()
+func (c *controller) writeTree(w io.Writer, d *sc.Synthdef) error {
+	buf := &bytes.Buffer{}
 
-	if len(os.Args) < 2 {
-		controller.usage()
-		os.Exit(1)
+	if err := d.WriteJSON(buf); err != nil {
+		return err
 	}
-	controller.command = os.Args[1]
+	s := synthdef{}
 
-	command := controller.flagSets[controller.command]
-
-	if command == nil {
-		controller.usage()
-		os.Exit(1)
+	if err := json.NewDecoder(buf).Decode(&s); err != nil {
+		return err
 	}
-	// parse cli flags for the command
-	if err := command.Parse(os.Args[2:]); err != nil {
-		if err == flag.ErrHelp {
-			controller.usage()
-			os.Exit(0)
-		} else {
-			controller.die(err)
-		}
-	}
-	// run the command
-	if err := controller.run(); err != nil {
-		controller.die(err)
-	}
+	return nil
 }

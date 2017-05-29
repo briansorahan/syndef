@@ -42,7 +42,7 @@ func (d differ) crawl(diffs [][2]string, idx1, idx2 int) [][2]string {
 			ui1 = in1.UgenIndex
 			ui2 = in2.UgenIndex
 		)
-		if isConstant(ui1) && isConstant(ui2) {
+		if isConstant(in1) && isConstant(in2) {
 			if v1, v2 := d.s1.Constants[oi1], d.s2.Constants[oi2]; v1 != v2 {
 				diffs = append(diffs, [2]string{
 					fmt.Sprintf("%s (ugen %d), input %d has constant value %f", u1.Name, idx1, i, v1),
@@ -51,14 +51,14 @@ func (d differ) crawl(diffs [][2]string, idx1, idx2 int) [][2]string {
 			}
 			continue
 		}
-		if isConstant(ui1) && !isConstant(ui2) {
+		if isConstant(in1) && !isConstant(in2) {
 			diffs = append(diffs, [2]string{
 				fmt.Sprintf("%s(%d), input %d is constant (%f)", u1.Name, idx1, i, d.s1.Constants[oi1]),
 				fmt.Sprintf("%s(%d), input %d points to %s(%d)", u2.Name, idx2, i, d.s2.Ugens[ui2].Name, ui2),
 			})
 			continue
 		}
-		if !isConstant(ui1) && isConstant(ui2) {
+		if !isConstant(in1) && isConstant(in2) {
 			diffs = append(diffs, [2]string{
 				fmt.Sprintf("%s(%d), input %d points to %s(%d)", u1.Name, idx1, i, d.s1.Ugens[ui1].Name, ui1),
 				fmt.Sprintf("%s(%d), input %d is constant (%f)", u2.Name, idx2, i, d.s2.Constants[oi2]),
@@ -118,48 +118,4 @@ func (d differ) getDefs(s1, s2 *sc.Synthdef) (d1 synthdef, d2 synthdef, err erro
 		return d1, d2, err
 	}
 	return d1, d2, nil
-}
-
-type synthdef struct {
-	Constants []float64 `json:"constants"`
-	Ugens     []ugen    `json:"ugens"`
-}
-
-func (s synthdef) root() int {
-	parents := make([]int, len(s.Ugens)) // Number of parents per ugen.
-	for _, u := range s.Ugens {
-		for _, in := range u.Inputs {
-			if isConstant(in.UgenIndex) {
-				continue
-			}
-			parents[in.UgenIndex]++
-		}
-	}
-	for i, count := range parents {
-		if count == 0 {
-			return i
-		}
-	}
-	return 0
-}
-
-type ugen struct {
-	Inputs       []input `json:"inputs"`
-	Name         string  `json:"name"`
-	Outputs      []int   `json:"outputs"`
-	Rate         int     `json:"rate"`
-	SpecialIndex int     `json:"rate"`
-}
-
-type input struct {
-	OutputIndex int `json:"outputIndex"`
-	UgenIndex   int `json:"ugenIndex"` // UgenIndex will be -1 when the input is a constant
-}
-
-func isConstant(ugenIndex int) bool {
-	return ugenIndex == -1
-}
-
-var commutative = map[string]struct{}{
-	"BinaryOpUgen": struct{}{},
 }

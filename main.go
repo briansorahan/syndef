@@ -1,11 +1,8 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/pkg/errors"
@@ -109,12 +106,14 @@ func (c *controller) format() error {
 		return err
 	}
 	switch *c.output {
-	case "json":
-		return d.WriteJSON(os.Stdout)
 	case "dot":
 		return d.WriteGraph(os.Stdout)
+	case "json":
+		return d.WriteJSON(os.Stdout)
 	case "xml":
 		return d.WriteXML(os.Stdout)
+	case "tree":
+		fallthrough
 	default:
 		return c.writeTree(os.Stdout, d)
 	}
@@ -140,18 +139,4 @@ func (c *controller) usage() {
 	for cmd, _ := range c.flagSets {
 		fmt.Fprintf(w, "%s\n", cmd)
 	}
-}
-
-func (c *controller) writeTree(w io.Writer, d *sc.Synthdef) error {
-	buf := &bytes.Buffer{}
-
-	if err := d.WriteJSON(buf); err != nil {
-		return err
-	}
-	s := synthdef{}
-
-	if err := json.NewDecoder(buf).Decode(&s); err != nil {
-		return err
-	}
-	return nil
 }

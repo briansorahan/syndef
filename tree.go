@@ -26,7 +26,7 @@ func (c *controller) writeTree(w io.Writer, d *sc.Synthdef) error {
 func tree(s synthdef, ugenIndex int, prefix string) error {
 	u := s.Ugens[ugenIndex]
 
-	fmt.Println(u.Name)
+	fmt.Printf("%s(%d)\n", u.Name, ugenIndex)
 
 	for i, in := range u.Inputs {
 		fmt.Printf(prefix + "|- ")

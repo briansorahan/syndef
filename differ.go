@@ -16,7 +16,7 @@ type differ struct {
 
 // crawl crawls the ugen graph, starting at the specified ugens in each synthdef,
 // looking for structural differences.
-func (d differ) crawl(diffs [][2]string, idx1, idx2 int) [][2]string {
+func (d *differ) crawl(diffs [][2]string, idx1, idx2 int) [][2]string {
 	var (
 		u1 = d.s1.Ugens[idx1]
 		u2 = d.s2.Ugens[idx2]
@@ -74,7 +74,7 @@ func (d differ) crawl(diffs [][2]string, idx1, idx2 int) [][2]string {
 
 // do does the diff, printing details to the provided writer.
 // The diff shows whether one ugen graph differs structurally from another.
-func (d differ) do(s1, s2 *sc.Synthdef) ([][2]string, error) {
+func (d *differ) do(s1, s2 *sc.Synthdef) ([][2]string, error) {
 	d1, d2, err := d.getDefs(s1, s2)
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (d differ) do(s1, s2 *sc.Synthdef) ([][2]string, error) {
 }
 
 // getDefs gets unmarshals to our synthdef representation.
-func (d differ) getDefs(s1, s2 *sc.Synthdef) (d1 synthdef, d2 synthdef, err error) {
+func (d *differ) getDefs(s1, s2 *sc.Synthdef) (d1 synthdef, d2 synthdef, err error) {
 	var (
 		buf1 = &bytes.Buffer{}
 		buf2 = &bytes.Buffer{}
@@ -117,5 +117,6 @@ func (d differ) getDefs(s1, s2 *sc.Synthdef) (d1 synthdef, d2 synthdef, err erro
 	if err := json.NewDecoder(buf2).Decode(&d2); err != nil {
 		return d1, d2, err
 	}
+	d.s1, d.s2 = d1, d2
 	return d1, d2, nil
 }

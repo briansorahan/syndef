@@ -84,9 +84,13 @@ func (c *controller) diff() error {
 	if err != nil {
 		return err
 	}
-	diffs, err := differ{}.do(s1, s2)
+	difr := &differ{}
+	diffs, err := difr.do(s1, s2)
 	if err != nil {
 		return err
+	}
+	if len(diffs) == 0 {
+		return nil
 	}
 	fmt.Printf("%-50s%-50s\n", fset.Arg(0), fset.Arg(1))
 	for _, diff := range diffs {

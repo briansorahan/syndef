@@ -29,15 +29,19 @@ func tree(s synthdef, ugenIndex int, prefix string) error {
 	fmt.Printf("%s(%d)\n", u.Name, ugenIndex)
 
 	for i, in := range u.Inputs {
-		fmt.Printf(prefix + "|- ")
+		if i == len(u.Inputs)-1 {
+			fmt.Printf(prefix + "\u2514\u2500\u2500 ")
+		} else {
+			fmt.Printf(prefix + "\u251c\u2500\u2500 ")
+		}
 		if isConstant(in) {
 			fmt.Printf("%f\n", s.Constants[in.OutputIndex])
 			continue
 		}
 		if i == len(u.Inputs)-1 {
-			tree(s, in.UgenIndex, prefix+"   ")
+			tree(s, in.UgenIndex, prefix+"    ")
 		} else {
-			tree(s, in.UgenIndex, prefix+"|  ")
+			tree(s, in.UgenIndex, prefix+"\u2502   ")
 		}
 	}
 	return nil

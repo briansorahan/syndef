@@ -1,15 +1,17 @@
-package main
+package defdiff
 
-type synthdef struct {
+// Synthdef presents a simplified version of a SuperCollider synthdef.
+type Synthdef struct {
 	Constants []float64 `json:"constants"`
-	Ugens     []ugen    `json:"ugens"`
+	Ugens     []Ugen    `json:"ugens"`
 }
 
-func (s synthdef) root() int {
+// Root returns the root node in the synthdef's ugen graph.
+func (s Synthdef) Root() int {
 	parents := make([]int, len(s.Ugens)) // Number of parents per ugen.
 	for _, u := range s.Ugens {
 		for _, in := range u.Inputs {
-			if isConstant(in) {
+			if IsConstant(in) {
 				continue
 			}
 			parents[in.UgenIndex]++
@@ -23,20 +25,20 @@ func (s synthdef) root() int {
 	return 0
 }
 
-type ugen struct {
-	Inputs       []input `json:"inputs"`
+type Ugen struct {
+	Inputs       []Input `json:"inputs"`
 	Name         string  `json:"name"`
 	Outputs      []int   `json:"outputs"`
 	Rate         int     `json:"rate"`
 	SpecialIndex int     `json:"rate"`
 }
 
-type input struct {
+type Input struct {
 	OutputIndex int `json:"outputIndex"`
 	UgenIndex   int `json:"ugenIndex"` // UgenIndex will be -1 when the input is a constant
 }
 
-func isConstant(in input) bool {
+func IsConstant(in Input) bool {
 	return in.UgenIndex == -1
 }
 

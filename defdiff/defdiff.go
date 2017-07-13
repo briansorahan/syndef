@@ -1,4 +1,4 @@
-package main
+package defdiff
 
 import (
 	"bytes"
@@ -8,10 +8,17 @@ import (
 	"github.com/scgolang/sc"
 )
 
+// Do diffs two synthdefs.
+// If the returned slice is empty it means the synthdefs are structurally identical.
+func Do(s1, s2 *sc.Synthdef) ([][2]string, error) {
+	dfr := &differ{}
+	return dfr.do(s1, s2)
+}
+
 // differ creates a diff of two synthdefs.
 type differ struct {
-	s1 synthdef
-	s2 synthdef
+	s1 Synthdef
+	s2 Synthdef
 }
 
 // crawl crawls the ugen graph, starting at the specified ugens in each synthdef,
@@ -42,7 +49,7 @@ func (d *differ) crawl(diffs [][2]string, idx1, idx2 int) [][2]string {
 			ui1 = in1.UgenIndex
 			ui2 = in2.UgenIndex
 		)
-		if isConstant(in1) && isConstant(in2) {
+		if IsConstant(in1) && IsConstant(in2) {
 			if v1, v2 := d.s1.Constants[oi1], d.s2.Constants[oi2]; v1 != v2 {
 				diffs = append(diffs, [2]string{
 					fmt.Sprintf("%s (ugen %d), input %d has constant value %f", u1.Name, idx1, i, v1),
@@ -51,14 +58,14 @@ func (d *differ) crawl(diffs [][2]string, idx1, idx2 int) [][2]string {
 			}
 			continue
 		}
-		if isConstant(in1) && !isConstant(in2) {
+		if IsConstant(in1) && !IsConstant(in2) {
 			diffs = append(diffs, [2]string{
 				fmt.Sprintf("%s(%d), input %d is constant (%f)", u1.Name, idx1, i, d.s1.Constants[oi1]),
 				fmt.Sprintf("%s(%d), input %d points to %s(%d)", u2.Name, idx2, i, d.s2.Ugens[ui2].Name, ui2),
 			})
 			continue
 		}
-		if !isConstant(in1) && isConstant(in2) {
+		if !IsConstant(in1) && IsConstant(in2) {
 			diffs = append(diffs, [2]string{
 				fmt.Sprintf("%s(%d), input %d points to %s(%d)", u1.Name, idx1, i, d.s1.Ugens[ui1].Name, ui1),
 				fmt.Sprintf("%s(%d), input %d is constant (%f)", u2.Name, idx2, i, d.s2.Constants[oi2]),
@@ -72,8 +79,9 @@ func (d *differ) crawl(diffs [][2]string, idx1, idx2 int) [][2]string {
 	return diffs
 }
 
-// do does the diff, printing details to the provided writer.
+// do performs a diff.
 // The diff shows whether one ugen graph differs structurally from another.
+// If the returned slice is empty it means the synthdefs are structurally identical.
 func (d *differ) do(s1, s2 *sc.Synthdef) ([][2]string, error) {
 	d1, d2, err := d.getDefs(s1, s2)
 	if err != nil {
@@ -96,11 +104,11 @@ func (d *differ) do(s1, s2 *sc.Synthdef) ([][2]string, error) {
 			},
 		}, nil
 	}
-	return d.crawl([][2]string{}, d1.root(), d2.root()), nil
+	return d.crawl([][2]string{}, d1.Root(), d2.Root()), nil
 }
 
 // getDefs gets unmarshals to our synthdef representation.
-func (d *differ) getDefs(s1, s2 *sc.Synthdef) (d1 synthdef, d2 synthdef, err error) {
+func (d *differ) getDefs(s1, s2 *sc.Synthdef) (d1 Synthdef, d2 Synthdef, err error) {
 	var (
 		buf1 = &bytes.Buffer{}
 		buf2 = &bytes.Buffer{}

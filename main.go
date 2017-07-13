@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/scgolang/sc"
+	"github.com/scgolang/syndef/defdiff"
 )
 
 func main() {
@@ -84,8 +85,7 @@ func (c *controller) diff() error {
 	if err != nil {
 		return err
 	}
-	difr := &differ{}
-	diffs, err := difr.do(s1, s2)
+	diffs, err := defdiff.Do(s1, s2)
 	if err != nil {
 		return err
 	}

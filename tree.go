@@ -7,6 +7,7 @@ import (
 	"io"
 
 	"github.com/scgolang/sc"
+	"github.com/scgolang/syndef/defdiff"
 )
 
 func (c *controller) writeTree(w io.Writer, d *sc.Synthdef) error {
@@ -15,15 +16,15 @@ func (c *controller) writeTree(w io.Writer, d *sc.Synthdef) error {
 	if err := d.WriteJSON(buf); err != nil {
 		return err
 	}
-	s := synthdef{}
+	s := defdiff.Synthdef{}
 
 	if err := json.NewDecoder(buf).Decode(&s); err != nil {
 		return err
 	}
-	return tree(s, s.root(), "")
+	return tree(s, s.Root(), "")
 }
 
-func tree(s synthdef, ugenIndex int, prefix string) error {
+func tree(s defdiff.Synthdef, ugenIndex int, prefix string) error {
 	u := s.Ugens[ugenIndex]
 
 	fmt.Printf("%s(%d)\n", u.Name, ugenIndex)
@@ -34,7 +35,7 @@ func tree(s synthdef, ugenIndex int, prefix string) error {
 		} else {
 			fmt.Printf(prefix + "\u251c\u2500\u2500 ")
 		}
-		if isConstant(in) {
+		if defdiff.IsConstant(in) {
 			fmt.Printf("%f\n", s.Constants[in.OutputIndex])
 			continue
 		}

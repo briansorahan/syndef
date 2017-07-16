@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/scgolang/sc"
-	"github.com/scgolang/syndef/defdiff"
 )
 
 func main() {
@@ -85,10 +84,7 @@ func (c *controller) diff() error {
 	if err != nil {
 		return err
 	}
-	diffs, err := defdiff.Do(s1, s2)
-	if err != nil {
-		return err
-	}
+	diffs := s1.Diff(s2)
 	if len(diffs) == 0 {
 		return nil
 	}
@@ -110,8 +106,8 @@ func (c *controller) format() error {
 		return err
 	}
 	switch *c.output {
-	case "dot":
-		return d.WriteGraph(os.Stdout)
+	// case "dot":
+	// 	return d.WriteGraph(os.Stdout)
 	case "json":
 		return d.WriteJSON(os.Stdout)
 	case "xml":
